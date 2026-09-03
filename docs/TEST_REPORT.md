@@ -10,6 +10,8 @@
 | 2026-09-03 | CP1 后端 | `backend\\mvnw.cmd --batch-mode clean verify` | PASS | 1 个单元测试通过，JAR 构建成功 |
 | 2026-09-03 | CP1 前端 | `npm run lint; npm run typecheck; npm run test; npm run build` | PASS | 零 lint 警告、严格类型检查通过、1 个 Vitest 通过、生产构建成功 |
 | 2026-09-03 | CP2 数据库 | `scripts\\verify-backend.ps1` | PASS | PostgreSQL 16.15 空库应用 2 个迁移；3 个集成测试通过；实测非法课次与重复生效槽位被数据库拒绝 |
+| 2026-09-03 | CP3 认证后端 | `scripts\\verify-backend.ps1` | PASS | PostgreSQL 16.15；8 个认证 API + 3 个迁移集成测试、3 个单元测试全部通过；零失败、零跳过 |
+| 2026-09-03 | CP3 认证前端 | `npm run lint; npm run typecheck; npm run test; npm run build` | PASS | 零 lint 警告、严格类型检查通过、2 个 Vitest 通过、Vite 生产构建成功 |
 
 ## 最终报告待填内容
 

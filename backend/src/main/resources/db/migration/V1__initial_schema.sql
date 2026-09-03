@@ -224,7 +224,7 @@ create table user_violation (
 create table refresh_session (
     id uuid primary key,
     user_id bigint not null references sys_user(id) on delete cascade,
-    token_hash char(64) not null unique,
+    token_hash varchar(64) not null unique,
     session_family_id uuid not null,
     user_session_version integer not null,
     issued_at timestamptz not null,

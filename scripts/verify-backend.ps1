@@ -6,8 +6,12 @@ Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $maven = Join-Path $repoRoot 'backend\mvnw.cmd'
 
-docker info --format '{{.ServerVersion}}' *> $null
-if ($LASTEXITCODE -eq 0) {
+$dockerAvailable = $false
+if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
+    & cmd.exe /d /c 'docker info --format "{{.ServerVersion}}" >nul 2>nul'
+    $dockerAvailable = $LASTEXITCODE -eq 0
+}
+if ($dockerAvailable) {
     & $maven -f (Join-Path $repoRoot 'backend\pom.xml') --batch-mode clean verify
     exit $LASTEXITCODE
 }

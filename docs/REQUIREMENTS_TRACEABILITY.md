@@ -5,10 +5,10 @@
 | 需求/章节 | 验收行为 | 后端实现位置 | 前端实现位置 | 数据库迁移 | 测试位置 | 当前状态 | 验证证据 |
 |---|---|---|---|---|---|---|---|
 | DB-01 / 6, 11 | Flyway 从空 PostgreSQL 创建完整结构、约束、索引和安全演示数据 | `db/migration/V1__initial_schema.sql` | 不适用 | V1 + dev repeatable | `database/FlywayMigrationIT` | VERIFIED | `scripts/verify-backend.ps1`：3 个迁移集成测试通过 |
-| AUTH-01 / 3.1, 10.1 | 四类角色登录、退出、刷新会话 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| AUTH-02 / 业务验收 2-4 | 单飞刷新、Refresh 轮换摘要、改密/退出/禁用撤销 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| AUTH-03 / 3.1 | 首次登录强制改密、失败锁定、用户禁用 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| RBAC-01 / 2 | RBAC 及接口级数据范围 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
+| AUTH-01 / 3.1, 10.1 | 四类角色登录、退出、刷新会话 | `auth/application`, `auth/web` | `stores/auth.ts`, 登录/改密页 | V1 | `auth/AuthApiIT` | VERIFIED | `scripts/verify-backend.ps1`：8 个认证 API 场景通过 |
+| AUTH-02 / 业务验收 2-4 | 单飞刷新、Refresh 轮换摘要、改密/退出/禁用撤销 | Refresh Session 摘要与族撤销 | `api/http.ts` 内存令牌与 SingleFlight | V1 | `AuthApiIT`, `http.spec.ts` | VERIFIED | 旧令牌复用撤销、注销撤销、禁用/改密即时失效及前端并发合并均通过 |
+| AUTH-03 / 3.1 | 首次登录强制改密、失败锁定、用户禁用 | `AuthService`, `MustChangePasswordFilter` | `ChangePasswordView.vue` | V1 | `AuthApiIT` | VERIFIED | 第五次失败锁定；首次改密前受限；改密后旧会话失效 |
+| RBAC-01 / 2 | RBAC 及接口级数据范围 | `SecurityConfig`, `DataScopeService` | 路由会话守卫 | V1 | `AuthApiIT` | IMPLEMENTED | 角色/权限和实验室负责人范围已验证；各业务接口接入随对应检查点继续验证 |
 | USER-01 / 7.6 | 系统管理员管理用户和角色 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
 | PERIOD-01 / 3.5.1 | 四节大课可配置并统一展示 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
 | LAB-01 / 3.2 | 实验室信息、状态、负责人、容量、标签和策略管理 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |

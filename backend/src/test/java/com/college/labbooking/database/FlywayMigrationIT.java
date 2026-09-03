@@ -3,6 +3,8 @@ package com.college.labbooking.database;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.college.labbooking.support.PostgresTestDatabase;
+import com.college.labbooking.support.PostgresTestDatabase.Database;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -13,31 +15,16 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.postgresql.util.PSQLException;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 class FlywayMigrationIT {
-    private static PostgreSQLContainer<?> postgres;
-    private static String jdbcUrl;
-    private static String username;
-    private static String password;
+    private static Database database;
 
     @BeforeAll
     static void migrateEmptyDatabase() {
-        jdbcUrl = System.getenv("TEST_DB_URL");
-        username = System.getenv().getOrDefault("TEST_DB_USERNAME", "lab_booking");
-        password = System.getenv().getOrDefault("TEST_DB_PASSWORD", "test-only-password");
-        if (jdbcUrl == null || jdbcUrl.isBlank()) {
-            postgres = new PostgreSQLContainer<>("postgres:16.10-alpine")
-                    .withDatabaseName("lab_booking_test")
-                    .withUsername(username)
-                    .withPassword(password);
-            postgres.start();
-            jdbcUrl = postgres.getJdbcUrl();
-            username = postgres.getUsername();
-            password = postgres.getPassword();
-        }
+        database = PostgresTestDatabase.schema("flyway_it");
         Flyway.configure()
-                .dataSource(jdbcUrl, username, password)
+                .dataSource(database.jdbcUrl(), database.username(), database.password())
+                .defaultSchema(database.schema())
                 .locations("classpath:db/migration", "classpath:db/devdata")
                 .load()
                 .migrate();
@@ -45,15 +32,13 @@ class FlywayMigrationIT {
 
     @AfterAll
     static void stopDatabase() {
-        if (postgres != null) {
-            postgres.stop();
-        }
+        database = null;
     }
 
     @Test
     void createsCompleteSchemaAndReferenceDataFromEmptyDatabase() throws SQLException {
         try (Connection connection = connection(); Statement statement = connection.createStatement()) {
-            assertThat(queryInt(statement, "select count(*) from information_schema.tables where table_schema = 'public'"))
+            assertThat(queryInt(statement, "select count(*) from information_schema.tables where table_schema = 'flyway_it'"))
                     .isGreaterThanOrEqualTo(24);
             assertThat(queryInt(statement, "select count(*) from course_period")).isEqualTo(4);
             assertThat(queryInt(statement, "select count(*) from sys_role")).isEqualTo(4);
@@ -101,6 +86,6 @@ class FlywayMigrationIT {
     }
 
     private static Connection connection() throws SQLException {
-        return DriverManager.getConnection(jdbcUrl, username, password);
+        return DriverManager.getConnection(database.jdbcUrl(), database.username(), database.password());
     }
 }
