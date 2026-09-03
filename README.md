@@ -25,7 +25,7 @@ npm ci
 npm run dev
 ```
 
-默认入口为 `http://localhost:5173`，后端 OpenAPI 文档为 `http://localhost:8080/swagger-ui.html`。演示账号将在种子数据检查点完成后列入 [管理员手册](docs/ADMIN_GUIDE.md)。
+默认入口为 `http://localhost:5173`，后端 OpenAPI 文档为 `http://localhost:8080/swagger-ui.html`。开发环境演示账号见 [管理员手册](docs/ADMIN_GUIDE.md)，首次登录必须修改初始密码。
 
 ## 验证
 

@@ -4,6 +4,7 @@
 
 | 需求/章节 | 验收行为 | 后端实现位置 | 前端实现位置 | 数据库迁移 | 测试位置 | 当前状态 | 验证证据 |
 |---|---|---|---|---|---|---|---|
+| DB-01 / 6, 11 | Flyway 从空 PostgreSQL 创建完整结构、约束、索引和安全演示数据 | `db/migration/V1__initial_schema.sql` | 不适用 | V1 + dev repeatable | `database/FlywayMigrationIT` | VERIFIED | `scripts/verify-backend.ps1`：3 个迁移集成测试通过 |
 | AUTH-01 / 3.1, 10.1 | 四类角色登录、退出、刷新会话 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
 | AUTH-02 / 业务验收 2-4 | 单飞刷新、Refresh 轮换摘要、改密/退出/禁用撤销 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
 | AUTH-03 / 3.1 | 首次登录强制改密、失败锁定、用户禁用 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |

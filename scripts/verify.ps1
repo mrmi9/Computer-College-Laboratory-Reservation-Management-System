@@ -18,7 +18,7 @@ function Invoke-Stage {
 Push-Location $repoRoot
 try {
     Invoke-Stage 'Backend compile, unit tests and coverage' {
-        & (Join-Path $repoRoot 'backend\mvnw.cmd') -f (Join-Path $repoRoot 'backend\pom.xml') --batch-mode clean verify
+        & (Join-Path $repoRoot 'scripts\verify-backend.ps1')
     }
     Invoke-Stage 'Frontend locked install' {
         npm --prefix (Join-Path $repoRoot 'frontend') ci --ignore-scripts

@@ -23,3 +23,9 @@
 - 状态：已接受
 - 决定：性能脚本使用 k6，并通过固定版本 Docker 镜像执行，不依赖宿主机安装。
 - 原因：当前环境未安装 k6，容器方式可重复且满足“不使用 latest”。
+
+## ADR-005：PostgreSQL 集成测试运行方式
+
+- 状态：已接受
+- 决定：同一个无跳过的 Flyway 集成测试优先读取一次性外部测试数据库；未提供时使用 `postgres:16.10-alpine` Testcontainers。Windows 统一验证脚本在 Docker 不可用时，以本机 PostgreSQL 16 二进制创建并销毁一次性集群。
+- 原因：当前 Docker Desktop 因 WSL 未启用而无法运行，但本机具备 PostgreSQL 16；该方式仍真实验证 PostgreSQL 语义，并保留 CI/Testcontainers 路径。
