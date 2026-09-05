@@ -27,7 +27,16 @@ if (-not $clusterPath.StartsWith($artifactRoot + [System.IO.Path]::DirectorySepa
 
 $pgCtl = Join-Path $postgresBin 'pg_ctl.exe'
 $createdb = Join-Path $postgresBin 'createdb.exe'
-$port = 55432
+$port = $null
+foreach ($candidate in 55432..55531) {
+    if (-not (Get-NetTCPConnection -LocalPort $candidate -ErrorAction SilentlyContinue)) {
+        $port = $candidate
+        break
+    }
+}
+if ($null -eq $port) {
+    throw 'No free PostgreSQL test port was found in the 55432-55531 range.'
+}
 $started = $false
 
 if (Test-Path -LiteralPath $clusterPath) {

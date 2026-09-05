@@ -4,12 +4,12 @@
 
 | 需求/章节 | 验收行为 | 后端实现位置 | 前端实现位置 | 数据库迁移 | 测试位置 | 当前状态 | 验证证据 |
 |---|---|---|---|---|---|---|---|
-| DB-01 / 6, 11 | Flyway 从空 PostgreSQL 创建完整结构、约束、索引和安全演示数据 | `db/migration/V1__initial_schema.sql` | 不适用 | V1 + dev repeatable | `database/FlywayMigrationIT` | VERIFIED | `scripts/verify-backend.ps1`：3 个迁移集成测试通过 |
+| DB-01 / 6, 11 | Flyway 从空 PostgreSQL 创建完整结构、约束、索引和安全演示数据 | `db/migration/V1__initial_schema.sql`, `V2__administration_and_reporting.sql` | 不适用 | V1-V2 + dev repeatable | `database/FlywayMigrationIT` | VERIFIED | `scripts/verify-backend.ps1`：空库应用 3 个迁移、3 个迁移集成测试通过 |
 | AUTH-01 / 3.1, 10.1 | 四类角色登录、退出、刷新会话 | `auth/application`, `auth/web` | `stores/auth.ts`, 登录/改密页 | V1 | `auth/AuthApiIT` | VERIFIED | `scripts/verify-backend.ps1`：8 个认证 API 场景通过 |
 | AUTH-02 / 业务验收 2-4 | 单飞刷新、Refresh 轮换摘要、改密/退出/禁用撤销 | Refresh Session 摘要与族撤销 | `api/http.ts` 内存令牌与 SingleFlight | V1 | `AuthApiIT`, `http.spec.ts` | VERIFIED | 旧令牌复用撤销、注销撤销、禁用/改密即时失效及前端并发合并均通过 |
 | AUTH-03 / 3.1 | 首次登录强制改密、失败锁定、用户禁用 | `AuthService`, `MustChangePasswordFilter` | `ChangePasswordView.vue` | V1 | `AuthApiIT` | VERIFIED | 第五次失败锁定；首次改密前受限；改密后旧会话失效 |
-| RBAC-01 / 2 | RBAC 及接口级数据范围 | `SecurityConfig`, `DataScopeService` | 路由会话守卫 | V1 | `AuthApiIT` | IMPLEMENTED | 角色/权限和实验室负责人范围已验证；各业务接口接入随对应检查点继续验证 |
-| USER-01 / 7.6 | 系统管理员管理用户和角色 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
+| RBAC-01 / 2 | RBAC 及接口级数据范围 | `SecurityConfig`, `DataScopeService` | 路由会话守卫 | V1 | `AuthApiIT`, `CatalogApiIT`, `ReservationApiIT`, `AdministrationStatisticsApiIT` | VERIFIED | 普通用户本人范围、管理员实验室范围、系统管理员全局范围和管理接口角色限制均通过 |
+| USER-01 / 7.6 | 系统管理员管理用户和角色 | `IdentityAdminService`/`IdentityAdminController` | 待完整前端接入 | V1-V2 | `AdministrationStatisticsApiIT` | VERIFIED | 创建/分页/更新、禁用撤销、角色版本与分配、内置管理员保护、CSV 导入任务均通过 |
 | PERIOD-01 / 3.5.1 | 四节大课可配置并统一展示 | `CatalogService`/`CatalogController` | 待完整前端接入 | V1 | `CatalogApiIT` | VERIFIED | 查询、系统管理员修改和版本冲突通过 |
 | LAB-01 / 3.2 | 实验室信息、状态、负责人、容量、标签和策略管理 | `catalog` 模块 | 待完整前端接入 | V1 | `CatalogApiIT` | VERIFIED | 分页筛选、创建、负责人更新、越权和版本冲突通过 |
 | LAB-02 / 3.2 | 周开放规则和特殊停用课次管理 | `catalog` 模块 | 待完整前端接入 | V1 | `CatalogApiIT` | VERIFIED | 批量替换规则、停用新增/删除、数据范围和审计通过 |
@@ -25,8 +25,8 @@
 | CONS-03 / 6.5 | 设备并发申请不超卖 | 设备 ID 升序行锁 + 生效用量汇总 | 待完整前端接入 | V1 | `ReservationApiIT` | VERIFIED | 并发申请后生效分配未超过总量；单申请超量审批被拒绝 |
 | ATT-01 / 3.7 | 签到、签退、代操作、自动完成和爽约 | `AttendanceService`/`AttendanceController` | 待完整前端接入 | V1 | `AttendanceOutboxIT` | VERIFIED | 申请人/管理员操作、人工与定时竞争、自动完成、违规阈值冻结均通过 |
 | NOTIFY-01 / 3.8 | 站内通知、Outbox、重试和失败记录 | `notification` 模块 | 待完整前端接入 | V1 | `AttendanceOutboxIT` | VERIFIED | 收件人隔离、已读、成功投递、退避重试和第 5 次永久失败均通过 |
-| STAT-01 / 3.9 | 总览、利用率、学生/教师分类、CSV 同筛选导出 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| AUDIT-01 / 10.3 | 登录、审批、取消、代签到、角色与配置修改审计 | 认证、目录、预约与考勤服务写入 `audit_log` | 待实现 | V1 | `AuthApiIT`, `CatalogApiIT`, `ReservationApiIT`, `AttendanceOutboxIT` | IMPLEMENTED | 登录、目录变更、预约流转和代签到留痕已测；角色/系统配置审计及查询接口在 CP8 完成 |
+| STAT-01 / 3.9 | 总览、利用率、学生/教师分类、CSV 同筛选导出 | `StatisticsService`/`StatisticsController` | 待完整前端接入 | V1 | `AdministrationStatisticsApiIT` | VERIFIED | 总量/分类/比率与明细精确核对；利用率分母按开放课次计算；范围、设备排行和 CSV 同筛选通过 |
+| AUDIT-01 / 10.3 | 登录、审批、取消、代签到、角色与配置修改审计 | 各业务服务写入 `audit_log`；`SystemAdminService` 查询 | 待完整前端接入 | V1 | `AuthApiIT`, `CatalogApiIT`, `ReservationApiIT`, `AttendanceOutboxIT`, `AdministrationStatisticsApiIT` | VERIFIED | 登录、资源、预约、代操作、角色、参数和导出均留痕；审计筛选和系统管理员权限通过 |
 | API-01 / 7 | OpenAPI 3 文档和统一错误格式 | 待实现 | 不适用 | 不适用 | 待实现 | PLANNED | 待验证 |
 | UI-01 / 9 | 完整业务端/管理端、四步预约、权限和状态页面 | API 待实现 | 待实现 | 不适用 | 待实现 | PLANNED | 待验证 |
 | DEPLOY-01 / 13 | Compose、Nginx、健康检查、HTTPS 模板、非 root | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |

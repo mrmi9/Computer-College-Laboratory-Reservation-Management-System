@@ -18,8 +18,8 @@
 | CP5 | 空闲查询、创建、详情、列表、状态机、取消 | 学生/教师预约闭环测试通过 | COMPLETE |
 | CP6 | 审批、乐观锁、幂等、时段与设备并发 | 强制并发场景通过 | COMPLETE |
 | CP7 | 签到签退、任务、通知、Outbox、审计 | 人工/定时竞争和重试测试通过 | COMPLETE |
-| CP8 | 统计、CSV、用户与系统管理 | 统计与明细核对通过 | IN_PROGRESS |
-| CP9 | 完整前端、响应式、权限、异常/空状态 | 1280px/390px E2E 与视觉检查通过 | PLANNED |
+| CP8 | 统计、CSV、用户与系统管理 | 统计与明细核对通过 | COMPLETE |
+| CP9 | 完整前端、响应式、权限、异常/空状态 | 1280px/390px E2E 与视觉检查通过 | IN_PROGRESS |
 | CP10 | OpenAPI、Docker、Nginx、备份恢复、性能、安全和文档 | 部署与恢复演练通过 | PLANNED |
 | CP11 | 全新环境总验证、修复、整理、远程交付 | `verify.ps1` 返回 0，分支推送并创建 PR/compare URL | PLANNED |
 
