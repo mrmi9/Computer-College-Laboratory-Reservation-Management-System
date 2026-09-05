@@ -62,7 +62,7 @@ test('真实 PostgreSQL 上完成学生人工审批、教师自动审批和取�
     await expect(row).toBeVisible()
     await row.getByRole('button', { name: '通过', exact: true }).click()
     await administrator.page.locator('.el-message-box').getByRole('button', { name: '确认通过' }).click()
-    await expect(administrator.page.getByText('审批已通过')).toBeVisible()
+    await expect(administrator.page.getByText('审批已通过', { exact: true })).toBeVisible()
 
     await student.page.goto(`/reservations/${studentReservationId}`)
     await expect(student.page.locator('.page-heading .el-tag')).toContainText('已通过')
