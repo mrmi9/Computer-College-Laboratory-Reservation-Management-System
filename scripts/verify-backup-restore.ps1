@@ -57,6 +57,10 @@ values ('backup-verifier', 'BACKUP_VERIFICATION', 'SYSTEM', '$marker', '$marker'
 "@
     Invoke-CheckedDocker ($composeArguments + @('exec', '-T', 'postgres', 'psql', '--username', $DatabaseUser, '--dbname', $SourceDatabase, '--set', 'ON_ERROR_STOP=1', '--command', $insertSql))
     $before = Get-DatabaseFingerprint $SourceDatabase
+    $beforeFingerprint = $before | ConvertFrom-Json
+    if ($beforeFingerprint.reservation_count -lt 1 -or $beforeFingerprint.audit_count -lt 1) {
+        throw "备份恢复验收数据必须同时包含预约和审计记录：$before"
+    }
 
     & (Join-Path $PSScriptRoot 'backup.ps1') -OutputPath $backupPath -ProjectName $ProjectName -Database $SourceDatabase -DatabaseUser $DatabaseUser | Out-Null
     $restoreStartedAt = [DateTime]::UtcNow
@@ -73,7 +77,7 @@ values ('backup-verifier', 'BACKUP_VERIFICATION', 'SYSTEM', '$marker', '$marker'
         sourceDatabase = $SourceDatabase
         restoredDatabase = $targetDatabase
         verificationMarker = $marker
-        fingerprint = ($before | ConvertFrom-Json)
+        fingerprint = $beforeFingerprint
         rpoSeconds = 0
         restoreSeconds = [Math]::Round($restoreSeconds, 3)
         totalSeconds = [Math]::Round(([DateTime]::UtcNow - $startedAt).TotalSeconds, 3)

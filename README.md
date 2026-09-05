@@ -1,10 +1,10 @@
 # 计算机学院实验室预约管理系统
 
-第一阶段候选版本，面向学生、教师、实验室管理员和系统管理员。系统提供实验室与设备目录、空闲查询、预约审批、签到签退、通知、审计、统计导出及运维恢复闭环。
+第一阶段可验收版本，面向学生、教师、实验室管理员和系统管理员。系统提供实验室与设备目录、空闲查询、预约审批、签到签退、通知、审计、统计导出及运维恢复闭环。
 
 ## 技术栈
 
-- 后端：Java 21、Spring Boot 3.5.13、Spring Security、Spring Data JPA、Flyway、PostgreSQL 16、springdoc-openapi。
+- 后端：Java 21、Spring Boot 3.5.16、Spring Security、Spring Data JPA、Flyway、PostgreSQL 16、springdoc-openapi。
 - 前端：Vue 3.5、严格 TypeScript、Vite 8、Pinia、Axios、Element Plus、ECharts。
 - 质量：JUnit 5、MockMvc、Testcontainers/本机隔离 PostgreSQL、JaCoCo、Vitest、Playwright、k6、Trivy。
 - 部署：Docker Compose、非 root Spring Boot/Nginx 容器、PostgreSQL、HTTPS 模板和加密备份。

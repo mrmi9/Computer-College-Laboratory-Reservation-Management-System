@@ -2,7 +2,7 @@
 
 ## 当前检查点
 
-`CP10 OpenAPI、Docker、Nginx、备份恢复、性能、安全和文档` — 进行中。
+`CP11 全新环境总验证、修复、整理、远程交付` — 已完成。
 
 ## 基线审计（2026-09-03）
 
@@ -31,10 +31,13 @@
 - 已完成固定版本的后端/前端镜像、多网络 Compose、非 root/只读容器、Nginx 开发代理与生产 TLS 模板。
 - 已完成 AES-256-GCM 加密备份/恢复、预约与审计指纹核对、10,000 用户/200 实验室/300 VU k6 场景和真实后端 Playwright 流程。
 - CI 最终阶段直接运行 `scripts/verify.ps1`，将 Docker、恢复、安全扫描、真实 E2E 和性能纳入同一干净环境门禁。
+- GitHub Actions 在 Ubuntu 24.04.4 LTS、4 vCPU、约 15.6 GiB 内存的干净环境完成统一发布验证；运行 `33965151077` 返回 0。
+- 300 VU 稳态场景完成 4,941 个真实 API 请求，业务与 HTTP 错误均为 0；空闲、预约、统计 P95 分别为 7.91 ms、9.56 ms、4.57 ms。
+- 容器构建/健康/网络/非 root/代理/管理端点隔离、真实后端 E2E 和两张运行时镜像 Trivy 扫描全部通过；备份在新库恢复 1 条预约和 1 条审计且指纹一致。
 
 ## 已完成检查点
 
-- CP1：Spring Boot 3.5.13/Maven Wrapper、Vue 3.5.42/Vite 8.2.2 严格 TypeScript 工程、固定依赖 lockfile、配置分层、CI 和 PowerShell 验证入口已建立；后端 `clean verify` 与前端 lint/typecheck/Vitest/build 均通过。
+- CP1：Spring Boot 3.5.16/Maven Wrapper、Vue 3.5.42/Vite 8.2.2 严格 TypeScript 工程、固定依赖 lockfile、配置分层、CI 和 PowerShell 验证入口已建立；后端 `clean verify` 与前端 lint/typecheck/Vitest/build 均通过。
 - CP2：Flyway 从 PostgreSQL 16.15 空库创建 25 张初始业务表、约束与索引，开发数据独立于生产迁移；CP8 的 V2 迁移新增用户导入任务表；非法课次、同槽位生效预约唯一性和密码摘要均通过集成测试。
 - CP3：认证、会话和前端登录闭环完成；真实 PostgreSQL 下 8 个认证 API 场景、3 个迁移场景和 3 个单元测试通过，覆盖轮换复用、CSRF、锁定、强制改密、注销和禁用撤销。
 - CP4：课次、实验室、开放规则、停用课次、设备的查询与管理接口完成；权限、数据范围、审计和乐观版本测试通过。
@@ -43,7 +46,9 @@
 - CP7：签到签退、管理员代操作、定时爽约/自动完成、违规冻结、站内通知和 Outbox 可靠投递完成；真实 PostgreSQL 下人工与定时竞争、重试至永久失败等 6 个新增集成场景通过。
 - CP8：用户/角色/权限分配与会话撤销、批量导入、参数版本、审计查询、统计和 CSV 完成；报表与明细抽样精确核对，负责人范围和导出筛选均通过。
 - CP9：完整 Vue 业务端/管理端和实验室日历完成；9 个 Vitest 与 14 个 Playwright 桌面/移动场景通过，覆盖自动/人工审批、冲突恢复、驳回、签到签退、爽约、越权、停用课次和统计导出；PostgreSQL 回归为 34 个集成测试与 5 个单元测试全绿。
+- CP10：OpenAPI、固定版本 Docker/Nginx、健康与安全边界、AES-256-GCM 备份恢复、真实后端 E2E、300 VU 性能与交付文档全部通过远程干净环境验收。
+- CP11：`scripts/verify.ps1` 在提交 `828537e` 的 GitHub Actions 运行 `33965151077` 返回 0，全部成果已推送到 `origin/codex/complete-first-release`。
 
 ## 环境注意事项
 
-- 本机 Docker Desktop 4.89 后端无法启动：日志同时报告 Virtual Machine Platform/虚拟化不可用，且遗留 `sailor-ingest.sock` 无法访问。Windows 验证脚本仍以本机 PostgreSQL 16 创建并销毁一次性真实集群；Docker、恢复、容器安全、真实后端 E2E 和性能使用 GitHub Actions 的 Docker 环境执行。
+- 本机 Docker Desktop 4.89 后端无法启动：日志同时报告 Virtual Machine Platform/虚拟化不可用，且遗留 `sailor-ingest.sock` 无法访问。Windows 验证脚本仍以本机 PostgreSQL 16 创建并销毁一次性真实集群；Docker、恢复、容器安全、真实后端 E2E 和性能已在 GitHub Actions 的 Docker 环境通过。

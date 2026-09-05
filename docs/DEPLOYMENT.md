@@ -21,6 +21,8 @@ Copy-Item .env.example .env
 
 必须修改：`DB_PASSWORD`、`JWT_SECRET`、`BACKUP_ENCRYPTION_KEY`、`CORS_ALLOWED_ORIGINS`、`TLS_CERT_DIRECTORY`。`.env` 被 Git 忽略，不应通过聊天、工单正文或日志传输。
 
+默认连接池/请求容量为 `DB_POOL_MAX_SIZE=20`、`DB_POOL_MIN_IDLE=5`、`TOMCAT_MAX_THREADS=200`、`TOMCAT_MIN_SPARE_THREADS=10`、`TOMCAT_ACCEPT_COUNT=200`；这些值已通过 300 VU 基线，生产调整前必须在目标机器复跑性能与数据库连接上限验证。
+
 校验两套 Compose：
 
 ```powershell

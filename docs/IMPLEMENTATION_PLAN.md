@@ -20,8 +20,8 @@
 | CP7 | 签到签退、任务、通知、Outbox、审计 | 人工/定时竞争和重试测试通过 | COMPLETE |
 | CP8 | 统计、CSV、用户与系统管理 | 统计与明细核对通过 | COMPLETE |
 | CP9 | 完整前端、响应式、权限、异常/空状态 | 1280px/390px E2E 与视觉检查通过 | COMPLETE |
-| CP10 | OpenAPI、Docker、Nginx、备份恢复、性能、安全和文档 | 部署与恢复演练通过 | IN_PROGRESS |
-| CP11 | 全新环境总验证、修复、整理、远程交付 | `verify.ps1` 返回 0，分支推送并创建 PR/compare URL | PLANNED |
+| CP10 | OpenAPI、Docker、Nginx、备份恢复、性能、安全和文档 | 部署与恢复演练通过 | COMPLETE |
+| CP11 | 全新环境总验证、修复、整理、远程交付 | `verify.ps1` 返回 0，分支推送并创建 PR/compare URL | COMPLETE |
 
 ## 验证节奏
 
