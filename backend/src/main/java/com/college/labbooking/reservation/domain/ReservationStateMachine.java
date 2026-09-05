@@ -28,7 +28,7 @@ public class ReservationStateMachine {
 
     public void requireTransition(ReservationStatus from, ReservationStatus to) {
         if (!ALLOWED.getOrDefault(from, Set.of()).contains(to)) {
-            throw new AppException(HttpStatus.CONFLICT, "ILLEGAL_RESERVATION_TRANSITION",
+            throw new AppException(HttpStatus.CONFLICT, "RESERVATION_STATUS_INVALID",
                     "预约状态不能从 " + from + " 变更为 " + to);
         }
     }

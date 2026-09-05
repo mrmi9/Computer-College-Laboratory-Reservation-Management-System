@@ -27,6 +27,10 @@
 - 已完成统计总览、实验室利用率、高峰课次、设备排行和同筛选 CSV 导出，并加入数据范围与公式注入保护。
 - 已完成全部业务端和管理端页面、实验室槽位日历/列表、主负责人管理、路由权限、加载/空/错误/403/404 状态和响应式布局。
 - 前端 Element Plus 与 ECharts 均按需加载；主入口由约 870 KB 降至约 88 KB。
+- 已完成 OpenAPI 3、安全限流、Prometheus 指标、统一参数错误响应和核心预约规则 80% JaCoCo 强制门槛。
+- 已完成固定版本的后端/前端镜像、多网络 Compose、非 root/只读容器、Nginx 开发代理与生产 TLS 模板。
+- 已完成 AES-256-GCM 加密备份/恢复、预约与审计指纹核对、10,000 用户/200 实验室/300 VU k6 场景和真实后端 Playwright 流程。
+- CI 最终阶段直接运行 `scripts/verify.ps1`，将 Docker、恢复、安全扫描、真实 E2E 和性能纳入同一干净环境门禁。
 
 ## 已完成检查点
 
@@ -42,4 +46,4 @@
 
 ## 环境注意事项
 
-- Docker Desktop 4.89 当前因宿主机未启用 WSL 而无法启动。Windows 验证脚本会自动选择空闲测试端口并使用本机 PostgreSQL 16 工具创建一次性真实数据库；CI 和 Docker 可用环境仍通过同一个测试类执行 Testcontainers 路径。
+- 本机 Docker Desktop 4.89 后端无法启动：日志同时报告 Virtual Machine Platform/虚拟化不可用，且遗留 `sailor-ingest.sock` 无法访问。Windows 验证脚本仍以本机 PostgreSQL 16 创建并销毁一次性真实集群；Docker、恢复、容器安全、真实后端 E2E 和性能使用 GitHub Actions 的 Docker 环境执行。

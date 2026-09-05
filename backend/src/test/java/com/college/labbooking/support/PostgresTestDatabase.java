@@ -38,7 +38,7 @@ public final class PostgresTestDatabase {
         username = System.getenv().getOrDefault("TEST_DB_USERNAME", "lab_booking");
         password = System.getenv().getOrDefault("TEST_DB_PASSWORD", "test-only-password");
         if (baseUrl == null || baseUrl.isBlank()) {
-            postgres = new PostgreSQLContainer<>("postgres:16.10-alpine")
+            postgres = new PostgreSQLContainer<>("postgres:16.15-alpine3.24")
                     .withDatabaseName("lab_booking_test")
                     .withUsername(username)
                     .withPassword(password);

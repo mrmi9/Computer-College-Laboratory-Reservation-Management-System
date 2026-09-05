@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$SkipDocker,
-    [switch]$SkipE2E
+    [switch]$SkipE2E,
+    [switch]$SkipPerformance
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,10 +31,27 @@ try {
     if (-not $SkipE2E) {
         Invoke-Stage 'Playwright E2E' { npm --prefix (Join-Path $repoRoot 'frontend') run e2e }
     }
-    Invoke-Stage 'Dependency audit' { npm --prefix (Join-Path $repoRoot 'frontend') audit --audit-level=high }
+    Invoke-Stage 'Docker Compose development and production configuration' {
+        docker compose --env-file (Join-Path $repoRoot '.env.example') -f (Join-Path $repoRoot 'compose.yaml') -f (Join-Path $repoRoot 'compose.dev.yaml') config --quiet
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        docker compose --env-file (Join-Path $repoRoot '.env.example') -f (Join-Path $repoRoot 'compose.yaml') -f (Join-Path $repoRoot 'compose.prod.yaml') config --quiet
+    }
+    Invoke-Stage 'Security checks' {
+        if ($SkipDocker) {
+            & (Join-Path $repoRoot 'scripts\verify-security.ps1') -SkipContainerScan
+        } else {
+            & (Join-Path $repoRoot 'scripts\verify-security.ps1')
+        }
+    }
     if (-not $SkipDocker) {
-        Invoke-Stage 'Docker Compose configuration' { docker compose --project-directory $repoRoot config --quiet }
-        Invoke-Stage 'Docker health and backup/restore verification' { & (Join-Path $repoRoot 'scripts\verify-docker.ps1') }
+        Invoke-Stage 'Docker health, recovery and real-backend E2E' {
+            & (Join-Path $repoRoot 'scripts\verify-docker.ps1') -SkipRealE2E:$SkipE2E
+        }
+        if (-not $SkipPerformance) {
+            Invoke-Stage 'k6 10k dataset and 300-user performance' {
+                & (Join-Path $repoRoot 'scripts\verify-performance.ps1')
+            }
+        }
     }
     Write-Host "`nAll requested verification stages passed."
 } finally {

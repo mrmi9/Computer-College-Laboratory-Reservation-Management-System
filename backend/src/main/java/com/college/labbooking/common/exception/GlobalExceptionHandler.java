@@ -1,6 +1,7 @@
 package com.college.labbooking.common.exception;
 
 import com.college.labbooking.common.api.ApiEnvelope;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.persistence.OptimisticLockException;
 import java.util.List;
 import org.slf4j.Logger;
@@ -9,10 +10,14 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,6 +35,18 @@ public class GlobalExceptionHandler {
                 .map(error -> new FieldViolation(error.getField(), error.getDefaultMessage()))
                 .toList();
         return ResponseEntity.badRequest().body(ApiEnvelope.error("VALIDATION_FAILED", "请求参数校验失败", details));
+    }
+
+    @ExceptionHandler({
+        HttpMessageNotReadableException.class,
+        MissingServletRequestParameterException.class,
+        MethodArgumentTypeMismatchException.class,
+        HandlerMethodValidationException.class,
+        ConstraintViolationException.class
+    })
+    ResponseEntity<ApiEnvelope<Void>> handleMalformedRequest(Exception exception) {
+        return ResponseEntity.badRequest()
+                .body(ApiEnvelope.error("MALFORMED_REQUEST", "请求参数缺失、类型或格式错误", null));
     }
 
     @ExceptionHandler({OptimisticLockException.class, OptimisticLockingFailureException.class})

@@ -9,6 +9,7 @@ import com.college.labbooking.security.CurrentUser;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import java.time.Duration;
 import java.util.Arrays;
 import org.springframework.http.HttpHeaders;
@@ -41,6 +42,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @SecurityRequirements
     public ResponseEntity<ApiEnvelope<SessionView>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
         AuthService.IssuedSession issued = authService.login(
@@ -49,6 +51,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @SecurityRequirements
     public ResponseEntity<ApiEnvelope<SessionView>> refresh(
             HttpServletRequest request,
             @RequestHeader(value = "X-CSRF-TOKEN", required = false) String csrfHeader) {

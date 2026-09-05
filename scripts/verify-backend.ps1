@@ -6,7 +6,16 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$maven = Join-Path $repoRoot 'backend\mvnw.cmd'
+$isWindowsHost = [System.OperatingSystem]::IsWindows()
+$maven = if ($isWindowsHost) {
+    Join-Path $repoRoot 'backend\mvnw.cmd'
+} else {
+    Join-Path $repoRoot 'backend/mvnw'
+}
+
+if (-not $isWindowsHost) {
+    $UseTestcontainers = $true
+}
 
 if ($UseTestcontainers) {
     & $maven -f (Join-Path $repoRoot 'backend\pom.xml') --batch-mode clean verify

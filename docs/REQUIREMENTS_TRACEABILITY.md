@@ -19,18 +19,18 @@
 | RES-02 / 2.2 | applicantType 仅由后端业务身份生成 | `ReservationService.applicantType` | 请求类型不含该字段 | V1 | `ReservationApiIT` | VERIFIED | 教师类型由 JWT 角色生成；纯管理员被拒绝 |
 | RES-03 / 3.5-3.6 | 自动/人工审批、驳回、管理员取消和历史 | `ReservationService` | `ApprovalsView.vue`, `ReservationDetailView.vue` | V1 | `ReservationApiIT`, Playwright | VERIFIED | 教师自动、学生人工、驳回原因、历史和管理操作通过 |
 | RES-04 / 8.2 | 状态机与非法转换保护 | `ReservationStateMachine` | 不适用 | V1 | `ReservationStateMachineTest`, `ReservationApiIT` | VERIFIED | 完整允许路径及终态/跨级非法转换通过 |
-| RES-05 / 3.5 | 申请人取消截止规则、管理员强制取消 | `ReservationService` | 待完整前端接入 | V1 | `ReservationApiIT` | IMPLEMENTED | 申请人取消闭环已测；截止边界和管理员取消继续补充 |
-| CONS-01 / 6.5 | 乐观锁、幂等键和重复请求保护 | 事务内 advisory lock + `idempotency_record` | 创建请求生成幂等键待接入 | V1 | `CatalogApiIT`, `ReservationApiIT` | VERIFIED | 重放同资源、换请求拒绝、过期版本拒绝通过 |
-| CONS-02 / 6.5 | 实验室时段并发只允许一条生效预约 | 实验室行锁 + 部分唯一索引 | 冲突展示待接入 | V1 | `ReservationApiIT`, `FlywayMigrationIT` | VERIFIED | 两线程同时审批仅一条成功，数据库唯一约束复验通过 |
-| CONS-03 / 6.5 | 设备并发申请不超卖 | 设备 ID 升序行锁 + 生效用量汇总 | 待完整前端接入 | V1 | `ReservationApiIT` | VERIFIED | 并发申请后生效分配未超过总量；单申请超量审批被拒绝 |
+| RES-05 / 3.5 | 申请人取消截止规则、管理员强制取消 | `ReservationService` | `ReservationDetailView.vue`, `ApprovalsView.vue` | V1 | `ReservationApiIT`, Playwright | VERIFIED | 截止前申请人取消、截止后阻止、管理员带原因强制取消及审计全部通过 |
+| CONS-01 / 6.5 | 乐观锁、幂等键和重复请求保护 | 事务内 advisory lock + `idempotency_record` | 创建/审批/取消请求生成幂等键 | V1 | `CatalogApiIT`, `ReservationApiIT`, Playwright | VERIFIED | 重放同资源、换请求拒绝、重复决策和过期版本拒绝通过 |
+| CONS-02 / 6.5 | 实验室时段并发只允许一条生效预约 | 实验室行锁 + 部分唯一索引 | 409 保留表单、回退并刷新实验室 | V1 | `ReservationApiIT`, `FlywayMigrationIT`, Playwright | VERIFIED | 两线程同时审批仅一条成功，数据库唯一约束与前端冲突恢复通过 |
+| CONS-03 / 6.5 | 设备并发申请不超卖 | 设备 ID 升序行锁 + 生效用量汇总 | 四步预约设备选择与数量校验 | V1 | `ReservationApiIT`, Playwright | VERIFIED | 并发申请后生效分配未超过总量；单申请超量审批被拒绝 |
 | ATT-01 / 3.7 | 签到、签退、代操作、自动完成和爽约 | `AttendanceService`/`AttendanceController` | 预约详情、审批与现场页 | V1 | `AttendanceOutboxIT`, Playwright | VERIFIED | 申请人/管理员操作、人工与定时竞争、自动完成、爽约显示和违规冻结通过 |
 | NOTIFY-01 / 3.8 | 站内通知、Outbox、重试和失败记录 | `notification` 模块 | `NotificationsView.vue`, `stores/notifications.ts` | V1 | `AttendanceOutboxIT`, `notifications.spec.ts` | VERIFIED | 收件人隔离、已读、Store 状态、退避重试和第 5 次永久失败均通过 |
 | STAT-01 / 3.9 | 总览、利用率、学生/教师分类、CSV 同筛选导出 | `StatisticsService`/`StatisticsController` | `StatisticsView.vue` | V1 | `AdministrationStatisticsApiIT`, Playwright | VERIFIED | 明细精确核对、开放课次分母、数据范围、图表/表格和同筛选 CSV 通过 |
 | AUDIT-01 / 10.3 | 登录、审批、取消、代签到、角色与配置修改审计 | 各业务服务写入 `audit_log`；`SystemAdminService` 查询 | `AuditView.vue` | V1 | 后端集成测试、Playwright | VERIFIED | 关键操作留痕、筛选、详情和系统管理员权限通过 |
-| API-01 / 7 | OpenAPI 3 文档和统一错误格式 | 待实现 | 不适用 | 不适用 | 待实现 | PLANNED | 待验证 |
+| API-01 / 7 | OpenAPI 3 文档和统一错误格式 | `OpenApiConfig`, `GlobalExceptionHandler`, 各 Controller 注解 | 不适用 | 不适用 | `OpenApiApiIT`, `RateLimitApiIT`, API 集成测试 | VERIFIED | OpenAPI 3 版本、Bearer 方案、公开登录、版本化路径及统一 400/401/403/409/429 响应通过 |
 | UI-01 / 9 | 完整业务端/管理端、四步预约、权限和状态页面 | 全部业务 API | `src/views`, `AppShell.vue`, 路由守卫和共享状态组件 | 不适用 | 9 个 Vitest，14 个 Playwright | VERIFIED | 1280×720 与 390×844 全绿；日历移动端默认列表；403/404/错误/空态及冲突恢复通过 |
-| DEPLOY-01 / 13 | Compose、Nginx、健康检查、HTTPS 模板、非 root | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| RECOVERY-01 / 13.3 | 备份恢复脚本及预约/审计一致性核对 | 待实现 | 不适用 | V1 | 待实现 | PLANNED | 待验证 |
-| TEST-01 / 12 | 12 个必测场景、单元/集成/E2E/并发/覆盖率 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| PERF-01 / 4, 12 | 1 万用户、200 实验室、300 并发及 P95 目标 | 待实现 | 不适用 | V1 | 待实现 | PLANNED | 待验证 |
-| DOC-01 / 12.3 | README、部署、测试、管理员、API 文档完整一致 | 不适用 | 不适用 | 不适用 | docs/ | IN_PROGRESS | 文档框架已建立 |
+| DEPLOY-01 / 13 | Compose、Nginx、健康检查、HTTPS 模板、非 root | `backend/Dockerfile`, Actuator/Prometheus | `frontend/Dockerfile`, `deploy/nginx/*`, `compose*.yaml` | V1 | `verify-docker.ps1`, `verify-security.ps1` | IMPLEMENTED | 开发/生产 Compose 静态解析通过；完整启动、健康与镜像扫描待远程 Docker 环境验证 |
+| RECOVERY-01 / 13.3 | 备份恢复脚本及预约/审计一致性核对 | `scripts/backup*.ps1`, `restore.ps1` | 不适用 | V1 | `verify-backup-restore.ps1` | IMPLEMENTED | AES-256-GCM 加密、显式目标及覆盖保护已实现；新库恢复指纹核对待远程 Docker 环境验证 |
+| TEST-01 / 12 | 12 个必测场景、单元/集成/E2E/并发/覆盖率 | JUnit/MockMvc/Testcontainers/JaCoCo | Vitest/Playwright | V1-V2 + dev seed | `backend/src/test`, `frontend/src/**/*.spec.ts`, `frontend/e2e*` | IMPLEMENTED | 12 个必测场景、44 个后端测试、9 个 Vitest、14 个 Mock E2E 已通过；真实后端 E2E 与统一入口待远程验证 |
+| PERF-01 / 4, 12 | 1 万用户、200 实验室、300 并发及 P95 目标 | 业务 API + PostgreSQL 索引 | 不适用 | V1 | `performance/load.js`, `verify-performance.ps1` | IMPLEMENTED | 固定 k6 镜像、目标数据量与阈值已实现；实测结果待远程 Docker 环境验证 |
+| DOC-01 / 12.3 | README、部署、测试、管理员、API 文档完整一致 | 不适用 | 不适用 | 不适用 | `docs/` | IMPLEMENTED | README、API、部署、管理员、测试、追踪、决策和实施状态均已按当前实现更新；最终远程实测数据待回填 |

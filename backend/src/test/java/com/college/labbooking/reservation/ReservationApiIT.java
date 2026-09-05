@@ -16,6 +16,7 @@ import com.college.labbooking.support.PostgresTestDatabase;
 import com.college.labbooking.support.PostgresTestDatabase.Database;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -173,11 +174,69 @@ class ReservationApiIT {
         List<String> outcomes = concurrent(
                 () -> reservationService.approve(first.id(), first.version(), "同意", "approve-a", LAB_ADMIN),
                 () -> reservationService.approve(second.id(), second.version(), "同意", "approve-b", LAB_ADMIN));
-        assertThat(outcomes).containsExactlyInAnyOrder("OK", "LAB_SLOT_CONFLICT");
+        assertThat(outcomes).containsExactlyInAnyOrder("OK", "RESERVATION_SLOT_CONFLICT");
         assertThat(jdbcTemplate.queryForObject(
                         "select count(*) from reservation where lab_id=102 and booking_date=? and period_no=1 "
                                 + "and status in ('APPROVED','IN_USE','COMPLETED')", Integer.class, date))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void separatePeriodsInTheSameLabCanBothBeApproved() {
+        LocalDate date = nextMonday();
+        ReservationView firstPeriod = reservationService.create(
+                request(102, date, 1, 12, List.of()), "different-period-a", STUDENT);
+        ReservationView secondPeriod = reservationService.create(
+                request(102, date, 2, 12, List.of()), "different-period-b", TEACHER);
+
+        ReservationView firstApproved = reservationService.approve(
+                firstPeriod.id(), firstPeriod.version(), "同意", "different-period-approve-a", LAB_ADMIN);
+        ReservationView secondApproved = reservationService.approve(
+                secondPeriod.id(), secondPeriod.version(), "同意", "different-period-approve-b", LAB_ADMIN);
+
+        assertThat(firstApproved.status()).isEqualTo("APPROVED");
+        assertThat(secondApproved.status()).isEqualTo("APPROVED");
+        assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from reservation where lab_id=102 and booking_date=? "
+                                + "and period_no in (1,2) and status='APPROVED'",
+                        Integer.class, date))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void requestBoundariesAndApprovalRevalidationRejectInvalidInputAndMaintenance() throws Exception {
+        String student = accessToken("student01");
+        LocalDate date = nextMonday();
+        ObjectNode payload = objectMapper.valueToTree(request(102, date, 1, 8, List.of()));
+        for (int invalidPeriod : List.of(0, 5)) {
+            payload.put("periodNo", invalidPeriod);
+            mockMvc.perform(post("/api/v1/reservations")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(student))
+                            .contentType(MediaType.APPLICATION_JSON).content(payload.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        payload.remove("periodNo");
+        mockMvc.perform(post("/api/v1/reservations")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(student))
+                        .contentType(MediaType.APPLICATION_JSON).content(payload.toString()))
+                .andExpect(status().isBadRequest());
+        payload.put("periodNo", 1);
+        payload.put("bookingDate", "not-a-date");
+        mockMvc.perform(post("/api/v1/reservations")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(student))
+                        .contentType(MediaType.APPLICATION_JSON).content(payload.toString()))
+                .andExpect(status().isBadRequest());
+        assertThat(captureCode(() -> reservationService.create(
+                request(102, LocalDate.now(ZoneId.of("Asia/Shanghai")).minusDays(1), 1, 8, List.of()),
+                null, STUDENT)))
+                .isEqualTo("BOOKING_DATE_PAST");
+
+        ReservationView pending = reservationService.create(
+                request(102, date, 1, 8, List.of()), "maintenance-recheck", STUDENT);
+        jdbcTemplate.update("update lab set status='MAINTENANCE' where id=102");
+        assertThat(captureCode(() -> reservationService.approve(
+                pending.id(), pending.version(), "同意", "maintenance-approve", LAB_ADMIN)))
+                .isEqualTo("LAB_UNAVAILABLE");
     }
 
     @Test
@@ -190,7 +249,7 @@ class ReservationApiIT {
         List<String> outcomes = concurrent(
                 () -> reservationService.approve(first.id(), first.version(), "同意", "equip-approve-a", LAB_ADMIN),
                 () -> reservationService.approve(second.id(), second.version(), "同意", "equip-approve-b", LAB_ADMIN));
-        assertThat(outcomes).containsExactlyInAnyOrder("OK", "LAB_SLOT_CONFLICT");
+        assertThat(outcomes).containsExactlyInAnyOrder("OK", "RESERVATION_SLOT_CONFLICT");
         Integer allocated = jdbcTemplate.queryForObject(
                 "select coalesce(sum(re.quantity),0) from reservation_equipment re join reservation r on r.id=re.reservation_id "
                         + "where re.equipment_id=202 and r.booking_date=? and r.period_no=2 and r.status='APPROVED'",
@@ -218,7 +277,7 @@ class ReservationApiIT {
                 pending.id(), 0, "另一个原因", "reject-once", LAB_ADMIN))).isEqualTo("IDEMPOTENCY_KEY_REUSED");
         assertThat(captureCode(() -> reservationService.approve(
                 pending.id(), 1, "再批准", "approve-rejected", LAB_ADMIN)))
-                .isEqualTo("ILLEGAL_RESERVATION_TRANSITION");
+                .isEqualTo("RESERVATION_STATUS_INVALID");
 
         jdbcTemplate.update("insert into lab (id,code,name,building,room_no,capacity,lab_type,tags) "
                 + "values (199,'FOREIGN-RES','外部实验室','外院楼','B201',20,'通用','[]')");
@@ -261,6 +320,29 @@ class ReservationApiIT {
                         .header(HttpHeaders.AUTHORIZATION, bearer(manager)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    @Test
+    void cancellationDeadlineBlocksApplicantButAdministratorCanForceCancelWithAudit() {
+        LocalDate date = nextMonday();
+        jdbcTemplate.update("update lab set cancel_before_minutes=500000 where id=102");
+        ReservationView pending = reservationService.create(request(102, date, 3, 8, List.of()), "late-cancel", STUDENT);
+
+        assertThat(captureCode(() -> reservationService.cancelByApplicant(
+                pending.id(), "临时变化", STUDENT))).isEqualTo("CANCELLATION_DEADLINE_PASSED");
+        ReservationView cancelled = reservationService.cancelByAdmin(
+                pending.id(), pending.version(), "管理员协调取消", LAB_ADMIN);
+
+        assertThat(cancelled.status()).isEqualTo("CANCELLED");
+        assertThat(cancelled.cancellationReason()).isEqualTo("管理员协调取消");
+        assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from approval_record where reservation_id=? and action='ADMIN_CANCEL'",
+                        Integer.class, pending.id()))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from audit_log where target_id=? and action='RESERVATION_CANCELLED' and actor_id=1003",
+                        Integer.class, Long.toString(pending.id())))
+                .isEqualTo(1);
     }
 
     private List<String> concurrent(ThrowingSupplier first, ThrowingSupplier second) throws Exception {

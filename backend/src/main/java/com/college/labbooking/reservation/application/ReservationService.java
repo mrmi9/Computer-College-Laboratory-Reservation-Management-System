@@ -385,7 +385,7 @@ public class ReservationService {
                 ? jdbcTemplate.queryForObject(sql + ")", Boolean.class, labId, date, periodNo)
                 : jdbcTemplate.queryForObject(sql + " and id<>?)", Boolean.class,
                         labId, date, periodNo, excludingReservationId);
-        if (Boolean.TRUE.equals(occupied)) throw conflict("LAB_SLOT_CONFLICT", "该实验室在所选课次已被占用");
+        if (Boolean.TRUE.equals(occupied)) throw conflict("RESERVATION_SLOT_CONFLICT", "该实验室在所选课次已被占用");
     }
 
     private LabPolicy lockLab(long id) {

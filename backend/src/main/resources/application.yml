@@ -29,6 +29,12 @@ management:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 app:
   timezone: Asia/Shanghai
   cors:
@@ -41,3 +47,7 @@ app:
   reservation:
     check-in-before-minutes: 15
     check-in-grace-minutes: 15
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    max-per-minute: ${RATE_LIMIT_MAX_PER_MINUTE:600}
+    login-max-per-minute: ${LOGIN_RATE_LIMIT_MAX_PER_MINUTE:30}
