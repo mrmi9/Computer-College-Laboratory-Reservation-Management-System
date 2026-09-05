@@ -30,7 +30,7 @@ class ReservationStateMachineTest {
                 .extracting(exception -> ((AppException) exception).code())
                 .isEqualTo("ILLEGAL_RESERVATION_TRANSITION");
         assertThatThrownBy(() -> stateMachine.requireTransition(
-                        ReservationStatus.APPROVED, ReservationStatus.COMPLETED))
+                        ReservationStatus.APPROVED, ReservationStatus.REJECTED))
                 .isInstanceOf(AppException.class);
     }
 }

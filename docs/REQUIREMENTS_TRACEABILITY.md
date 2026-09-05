@@ -23,10 +23,10 @@
 | CONS-01 / 6.5 | 乐观锁、幂等键和重复请求保护 | 事务内 advisory lock + `idempotency_record` | 创建请求生成幂等键待接入 | V1 | `CatalogApiIT`, `ReservationApiIT` | VERIFIED | 重放同资源、换请求拒绝、过期版本拒绝通过 |
 | CONS-02 / 6.5 | 实验室时段并发只允许一条生效预约 | 实验室行锁 + 部分唯一索引 | 冲突展示待接入 | V1 | `ReservationApiIT`, `FlywayMigrationIT` | VERIFIED | 两线程同时审批仅一条成功，数据库唯一约束复验通过 |
 | CONS-03 / 6.5 | 设备并发申请不超卖 | 设备 ID 升序行锁 + 生效用量汇总 | 待完整前端接入 | V1 | `ReservationApiIT` | VERIFIED | 并发申请后生效分配未超过总量；单申请超量审批被拒绝 |
-| ATT-01 / 3.7 | 签到、签退、代操作、自动完成和爽约 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| NOTIFY-01 / 3.8 | 站内通知、Outbox、重试和失败记录 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
+| ATT-01 / 3.7 | 签到、签退、代操作、自动完成和爽约 | `AttendanceService`/`AttendanceController` | 待完整前端接入 | V1 | `AttendanceOutboxIT` | VERIFIED | 申请人/管理员操作、人工与定时竞争、自动完成、违规阈值冻结均通过 |
+| NOTIFY-01 / 3.8 | 站内通知、Outbox、重试和失败记录 | `notification` 模块 | 待完整前端接入 | V1 | `AttendanceOutboxIT` | VERIFIED | 收件人隔离、已读、成功投递、退避重试和第 5 次永久失败均通过 |
 | STAT-01 / 3.9 | 总览、利用率、学生/教师分类、CSV 同筛选导出 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
-| AUDIT-01 / 10.3 | 登录、审批、取消、代签到、角色与配置修改审计 | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
+| AUDIT-01 / 10.3 | 登录、审批、取消、代签到、角色与配置修改审计 | 认证、目录、预约与考勤服务写入 `audit_log` | 待实现 | V1 | `AuthApiIT`, `CatalogApiIT`, `ReservationApiIT`, `AttendanceOutboxIT` | IMPLEMENTED | 登录、目录变更、预约流转和代签到留痕已测；角色/系统配置审计及查询接口在 CP8 完成 |
 | API-01 / 7 | OpenAPI 3 文档和统一错误格式 | 待实现 | 不适用 | 不适用 | 待实现 | PLANNED | 待验证 |
 | UI-01 / 9 | 完整业务端/管理端、四步预约、权限和状态页面 | API 待实现 | 待实现 | 不适用 | 待实现 | PLANNED | 待验证 |
 | DEPLOY-01 / 13 | Compose、Nginx、健康检查、HTTPS 模板、非 root | 待实现 | 待实现 | V1 | 待实现 | PLANNED | 待验证 |
