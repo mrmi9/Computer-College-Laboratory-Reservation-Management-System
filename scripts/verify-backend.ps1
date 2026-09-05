@@ -1,17 +1,14 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$UseTestcontainers
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $maven = Join-Path $repoRoot 'backend\mvnw.cmd'
 
-$dockerAvailable = $false
-if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
-    & cmd.exe /d /c 'docker info --format "{{.ServerVersion}}" >nul 2>nul'
-    $dockerAvailable = $LASTEXITCODE -eq 0
-}
-if ($dockerAvailable) {
+if ($UseTestcontainers) {
     & $maven -f (Join-Path $repoRoot 'backend\pom.xml') --batch-mode clean verify
     exit $LASTEXITCODE
 }

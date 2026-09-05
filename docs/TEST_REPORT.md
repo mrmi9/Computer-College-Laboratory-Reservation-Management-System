@@ -12,6 +12,7 @@
 | 2026-09-03 | CP2 数据库 | `scripts\\verify-backend.ps1` | PASS | PostgreSQL 16.15 空库应用 2 个迁移；3 个集成测试通过；实测非法课次与重复生效槽位被数据库拒绝 |
 | 2026-09-03 | CP3 认证后端 | `scripts\\verify-backend.ps1` | PASS | PostgreSQL 16.15；8 个认证 API + 3 个迁移集成测试、3 个单元测试全部通过；零失败、零跳过 |
 | 2026-09-03 | CP3 认证前端 | `npm run lint; npm run typecheck; npm run test; npm run build` | PASS | 零 lint 警告、严格类型检查通过、2 个 Vitest 通过、Vite 生产构建成功 |
+| 2026-09-05 | CP4-CP6 资源与预约 | `scripts\\verify-backend.ps1` | PASS | PostgreSQL 16.15；22 个集成测试和 5 个单元测试全部通过，含两线程时段/库存竞争、幂等、版本和状态机；零失败、零跳过 |
 
 ## 最终报告待填内容
 
