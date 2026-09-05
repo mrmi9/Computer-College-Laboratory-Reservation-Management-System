@@ -2,6 +2,7 @@ package com.college.labbooking.catalog.web;
 
 import com.college.labbooking.catalog.application.CatalogService;
 import com.college.labbooking.catalog.application.CatalogService.BlackoutView;
+import com.college.labbooking.catalog.application.CatalogService.CalendarSlotView;
 import com.college.labbooking.catalog.application.CatalogService.EquipmentView;
 import com.college.labbooking.catalog.application.CatalogService.LabView;
 import com.college.labbooking.catalog.application.CatalogService.OpenRuleView;
@@ -69,6 +70,14 @@ public class CatalogController {
     @GetMapping("/labs/{id}")
     public ApiEnvelope<LabView> lab(@PathVariable long id) {
         return ApiEnvelope.ok(catalogService.lab(id));
+    }
+
+    @GetMapping("/labs/{id}/calendar")
+    public ApiEnvelope<List<CalendarSlotView>> calendar(
+            @PathVariable long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ApiEnvelope.ok(catalogService.calendar(id, from, to));
     }
 
     @PostMapping("/labs")
@@ -156,7 +165,8 @@ public class CatalogController {
             @jakarta.validation.constraints.Pattern(regexp = "AUTO|MANUAL") String studentApprovalMode,
             @jakarta.validation.constraints.Pattern(regexp = "AUTO|MANUAL") String teacherApprovalMode,
             boolean allowStudentBooking, @Min(1) @Max(4) int maxPeriodsPerUserDay, @Min(0) int advanceDays,
-            @Min(0) int cancelBeforeMinutes, boolean requireCheckIn, @Min(0) long version) {}
+            @Min(0) int cancelBeforeMinutes, boolean requireCheckIn, @Min(1) Long responsibleUserId,
+            @Min(0) long version) {}
 
     public record OpenRuleRequest(@Min(1) @Max(7) int dayOfWeek, @Min(1) @Max(4) int periodNo,
             LocalDate validFrom, LocalDate validTo) {}

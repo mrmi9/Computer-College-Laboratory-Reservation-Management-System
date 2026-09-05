@@ -34,3 +34,9 @@ export interface SessionPayload {
   user: SessionUser
 }
 
+export interface PageData<T> {
+  items: T[]
+  page: number
+  size: number
+  total: number
+}

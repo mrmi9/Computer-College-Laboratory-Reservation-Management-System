@@ -78,6 +78,34 @@ class CatalogApiIT {
     }
 
     @Test
+    void calendarShowsAvailabilityReservationsAndBlackoutsWithoutApplicantData() throws Exception {
+        jdbcTemplate.update(
+                "insert into reservation (reservation_no,applicant_id,applicant_type,lab_id,title,purpose,participant_count,"
+                        + "booking_date,period_no,status,contact_phone,project_or_course) values "
+                        + "('CALENDAR-1',1001,'STUDENT',101,'私密标题','私密用途',10,'2030-01-07',1,'APPROVED','13800000001','测试')");
+        jdbcTemplate.update(
+                "insert into lab_blackout(lab_id,booking_date,period_no,reason,created_by) values "
+                        + "(101,'2030-01-07',2,'设备维护',1003)");
+
+        String student = accessToken("student01");
+        mockMvc.perform(get("/api/v1/labs/101/calendar?from=2030-01-07&to=2030-01-07")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(student)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(4))
+                .andExpect(jsonPath("$.data[0].slotStatus").value("RESERVED"))
+                .andExpect(jsonPath("$.data[1].slotStatus").value("BLACKOUT"))
+                .andExpect(jsonPath("$.data[1].reason").value("设备维护"))
+                .andExpect(jsonPath("$.data[2].slotStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data[0].applicantName").doesNotExist())
+                .andExpect(jsonPath("$.data[0].title").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/labs/101/calendar?from=2030-01-01&to=2030-03-01")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(student)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DATE_RANGE_INVALID"));
+    }
+
+    @Test
     void labAdministratorCanMaintainOnlyAssignedLabResources() throws Exception {
         String admin = accessToken("labadmin01");
 
@@ -164,10 +192,18 @@ class CatalogApiIT {
                                 {"code":"LAB-C201","name":"网络实验室","building":"计算机楼","roomNo":"C201",
                                  "capacity":36,"labType":"专业实验室","tags":["网络"],"status":"ACTIVE",
                                  "studentApprovalMode":"MANUAL","teacherApprovalMode":"MANUAL","allowStudentBooking":true,
-                                 "maxPeriodsPerUserDay":2,"advanceDays":14,"cancelBeforeMinutes":120,"requireCheckIn":true,"version":0}
+                                 "maxPeriodsPerUserDay":2,"advanceDays":14,"cancelBeforeMinutes":120,"requireCheckIn":true,
+                                 "responsibleUserId":1003,"version":0}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.code").value("LAB-C201"));
+                .andExpect(jsonPath("$.data.code").value("LAB-C201"))
+                .andExpect(jsonPath("$.data.responsibleUserId").value(1003))
+                .andExpect(jsonPath("$.data.responsibleUserName").value("实验室管理员"));
+        assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from lab_manager lm join lab l on l.id=lm.lab_id "
+                                + "where l.code='LAB-C201' and lm.user_id=1003",
+                        Integer.class))
+                .isOne();
     }
 
     private String accessToken(String username) throws Exception {

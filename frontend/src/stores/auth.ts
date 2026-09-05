@@ -12,6 +12,13 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     authenticated: (state): boolean => state.user !== null,
     mustChangePassword: (state): boolean => state.user?.mustChangePassword ?? false,
+    hasPermission: (state) => (permission: string): boolean => state.user?.permissions.includes(permission) ?? false,
+    hasRole: (state) => (role: string): boolean => state.user?.roles.includes(role) ?? false,
+    applicantType: (state): 'STUDENT' | 'TEACHER' | null => {
+      if (state.user?.roles.includes('TEACHER') === true) return 'TEACHER'
+      if (state.user?.roles.includes('STUDENT') === true) return 'STUDENT'
+      return null
+    },
   },
   actions: {
     async login(username: string, password: string): Promise<SessionUser> {
@@ -51,4 +58,3 @@ export const useAuthStore = defineStore('auth', {
     },
   },
 })
-

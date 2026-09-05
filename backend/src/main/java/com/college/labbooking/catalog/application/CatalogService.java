@@ -20,8 +20,10 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -83,13 +85,19 @@ public class CatalogService {
         Long total = jdbcTemplate.queryForObject("select count(*) from lab l" + where, Long.class, params);
         Object[] pageParams = {normalized, like, like, like, normalizedStatus, normalizedStatus, size, (long) page * size};
         List<LabView> items = jdbcTemplate.query(
-                "select l.* from lab l" + where + " order by l.code limit ? offset ?", this::labView, pageParams);
+                "select l.*,u.real_name responsible_user_name from lab l left join sys_user u on u.id=l.responsible_user_id"
+                        + where + " order by l.code limit ? offset ?",
+                this::labView,
+                pageParams);
         return new PageView<>(items, page, size, total == null ? 0 : total);
     }
 
     public LabView lab(long id) {
         try {
-            return jdbcTemplate.queryForObject("select * from lab where id=?", this::labView, id);
+            return jdbcTemplate.queryForObject(
+                    "select l.*,u.real_name responsible_user_name from lab l left join sys_user u on u.id=l.responsible_user_id where l.id=?",
+                    this::labView,
+                    id);
         } catch (EmptyResultDataAccessException exception) {
             throw notFound("LAB_NOT_FOUND", "实验室不存在");
         }
@@ -100,15 +108,18 @@ public class CatalogService {
         if (!user.hasRole("SYSTEM_ADMIN")) {
             throw new AppException(HttpStatus.FORBIDDEN, "LAB_SCOPE_DENIED", "仅系统管理员可以创建实验室");
         }
+        long responsibleUserId = requireResponsibleUser(request.responsibleUserId());
         Long id = jdbcTemplate.queryForObject(
                 "insert into lab (code,name,building,room_no,capacity,lab_type,description,image_url,tags,status,"
                         + "student_approval_mode,teacher_approval_mode,allow_student_booking,max_periods_per_user_day,"
-                        + "advance_days,cancel_before_minutes,require_check_in) values (?,?,?,?,?,?,?,?,cast(? as jsonb),?,?,?,?,?,?,?,?) returning id",
+                        + "advance_days,cancel_before_minutes,require_check_in,responsible_user_id) values (?,?,?,?,?,?,?,?,cast(? as jsonb),?,?,?,?,?,?,?,?,?) returning id",
                 Long.class,
                 request.code().trim(), request.name().trim(), request.building().trim(), request.roomNo().trim(),
                 request.capacity(), request.labType().trim(), request.description(), request.imageUrl(), json(request.tags()),
                 request.status(), request.studentApprovalMode(), request.teacherApprovalMode(), request.allowStudentBooking(),
-                request.maxPeriodsPerUserDay(), request.advanceDays(), request.cancelBeforeMinutes(), request.requireCheckIn());
+                request.maxPeriodsPerUserDay(), request.advanceDays(), request.cancelBeforeMinutes(), request.requireCheckIn(),
+                responsibleUserId);
+        syncResponsibleManager(id, responsibleUserId);
         auditService.record(user.id(), user.username(), "LAB_CREATED", "LAB", String.valueOf(id), true, Map.of("code", request.code()));
         return lab(id);
     }
@@ -116,19 +127,71 @@ public class CatalogService {
     @Transactional
     public LabView updateLab(long id, LabRequest request, CurrentUser user) {
         requireManage(user, id);
+        LabView existing = lab(id);
+        Long responsibleUserId = request.responsibleUserId() == null
+                ? existing.responsibleUserId()
+                : requireResponsibleUser(request.responsibleUserId());
+        if (!user.hasRole("SYSTEM_ADMIN") && !Objects.equals(existing.responsibleUserId(), responsibleUserId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "LAB_RESPONSIBLE_CHANGE_DENIED", "仅系统管理员可以变更实验室负责人");
+        }
         int updated = jdbcTemplate.update(
                 "update lab set code=?,name=?,building=?,room_no=?,capacity=?,lab_type=?,description=?,image_url=?,"
                         + "tags=cast(? as jsonb),status=?,student_approval_mode=?,teacher_approval_mode=?,allow_student_booking=?,"
-                        + "max_periods_per_user_day=?,advance_days=?,cancel_before_minutes=?,require_check_in=?,version=version+1,updated_at=now() "
+                        + "max_periods_per_user_day=?,advance_days=?,cancel_before_minutes=?,require_check_in=?,responsible_user_id=?,version=version+1,updated_at=now() "
                         + "where id=? and version=?",
                 request.code().trim(), request.name().trim(), request.building().trim(), request.roomNo().trim(),
                 request.capacity(), request.labType().trim(), request.description(), request.imageUrl(), json(request.tags()),
                 request.status(), request.studentApprovalMode(), request.teacherApprovalMode(), request.allowStudentBooking(),
                 request.maxPeriodsPerUserDay(), request.advanceDays(), request.cancelBeforeMinutes(), request.requireCheckIn(),
-                id, request.version());
+                responsibleUserId, id, request.version());
         requireUpdated(updated, "LAB_NOT_FOUND", "实验室不存在");
+        syncResponsibleManager(id, responsibleUserId);
         auditService.record(user.id(), user.username(), "LAB_UPDATED", "LAB", String.valueOf(id), true, Map.of("version", request.version()));
         return lab(id);
+    }
+
+    public List<CalendarSlotView> calendar(long labId, LocalDate from, LocalDate to) {
+        lab(labId);
+        LocalDate start = from == null ? LocalDate.now() : from;
+        LocalDate end = to == null ? start.plusDays(6) : to;
+        long days = ChronoUnit.DAYS.between(start, end);
+        if (days < 0 || days > 30) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "DATE_RANGE_INVALID", "日历范围必须为连续的 1 至 31 天");
+        }
+        return jdbcTemplate.query(
+                """
+                select d.booking_date,p.period_no,p.name period_name,p.start_time,p.end_time,
+                       case when b.id is not null then 'BLACKOUT'
+                            when r.id is not null then 'RESERVED'
+                            when l.status <> 'ACTIVE' or not p.enabled then 'CLOSED'
+                            when not exists(select 1 from lab_open_rule o where o.lab_id=l.id
+                                 and o.day_of_week=extract(isodow from d.booking_date)
+                                 and o.period_no=p.period_no
+                                 and (o.valid_from is null or o.valid_from<=d.booking_date)
+                                 and (o.valid_to is null or o.valid_to>=d.booking_date)) then 'CLOSED'
+                            else 'AVAILABLE' end slot_status,
+                       b.reason
+                  from (select generate_series(cast(? as date),cast(? as date),interval '1 day')::date booking_date) d
+                  cross join course_period p
+                  cross join lab l
+                  left join lab_blackout b on b.lab_id=l.id and b.booking_date=d.booking_date and b.period_no=p.period_no
+                  left join lateral (select rr.id from reservation rr where rr.lab_id=l.id
+                       and rr.booking_date=d.booking_date and rr.period_no=p.period_no
+                       and rr.status in ('APPROVED','IN_USE','COMPLETED') limit 1) r on true
+                 where l.id=?
+                 order by d.booking_date,p.period_no
+                """,
+                (rs, row) -> new CalendarSlotView(
+                        rs.getDate("booking_date").toLocalDate(),
+                        rs.getInt("period_no"),
+                        rs.getString("period_name"),
+                        rs.getTime("start_time").toLocalTime(),
+                        rs.getTime("end_time").toLocalTime(),
+                        rs.getString("slot_status"),
+                        rs.getString("reason")),
+                start,
+                end,
+                labId);
     }
 
     public List<OpenRuleView> openRules(long labId) {
@@ -252,7 +315,7 @@ public class CatalogService {
                 rs.getString("student_approval_mode"), rs.getString("teacher_approval_mode"),
                 rs.getBoolean("allow_student_booking"), rs.getInt("max_periods_per_user_day"),
                 rs.getInt("advance_days"), rs.getInt("cancel_before_minutes"), rs.getBoolean("require_check_in"),
-                rs.getLong("version"));
+                nullableLong(rs, "responsible_user_id"), rs.getString("responsible_user_name"), rs.getLong("version"));
     }
 
     private EquipmentView equipmentView(ResultSet rs, int row) throws SQLException {
@@ -266,6 +329,26 @@ public class CatalogService {
         if (!dataScope.canManageLab(user, labId)) {
             throw new AppException(HttpStatus.FORBIDDEN, "LAB_SCOPE_DENIED", "无权管理该实验室");
         }
+    }
+
+    private long requireResponsibleUser(Long userId) {
+        if (userId == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "LAB_RESPONSIBLE_REQUIRED", "必须选择实验室负责人");
+        }
+        Boolean eligible = jdbcTemplate.queryForObject(
+                "select exists(select 1 from sys_user u join sys_user_role ur on ur.user_id=u.id "
+                        + "join sys_role r on r.id=ur.role_id where u.id=? and u.status='ACTIVE' and r.code='LAB_ADMIN')",
+                Boolean.class,
+                userId);
+        if (!Boolean.TRUE.equals(eligible)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "LAB_RESPONSIBLE_INVALID", "负责人必须是启用的实验室管理员");
+        }
+        return userId;
+    }
+
+    private void syncResponsibleManager(long labId, long userId) {
+        jdbcTemplate.update(
+                "insert into lab_manager(lab_id,user_id) values (?,?) on conflict do nothing", labId, userId);
     }
 
     private void requireUpdated(int updated, String notFoundCode, String notFoundMessage) {
@@ -298,12 +381,21 @@ public class CatalogService {
         return value == null ? null : value.toLocalDate();
     }
 
+    private Long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
+    }
+
     public record PeriodView(int periodNo, String name, LocalTime startTime, LocalTime endTime, boolean enabled, long version) {}
 
     public record LabView(long id, String code, String name, String building, String roomNo, int capacity,
             String labType, String description, String imageUrl, List<String> tags, String status,
             String studentApprovalMode, String teacherApprovalMode, boolean allowStudentBooking,
-            int maxPeriodsPerUserDay, int advanceDays, int cancelBeforeMinutes, boolean requireCheckIn, long version) {}
+            int maxPeriodsPerUserDay, int advanceDays, int cancelBeforeMinutes, boolean requireCheckIn,
+            Long responsibleUserId, String responsibleUserName, long version) {}
+
+    public record CalendarSlotView(LocalDate bookingDate, int periodNo, String periodName, LocalTime startTime,
+            LocalTime endTime, String slotStatus, String reason) {}
 
     public record OpenRuleView(long id, long labId, int dayOfWeek, int periodNo, LocalDate validFrom, LocalDate validTo) {}
 

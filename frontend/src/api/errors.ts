@@ -8,3 +8,9 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
+
+export function apiErrorCode(error: unknown): string | null {
+  if (!(error instanceof AxiosError)) return null
+  const body = error.response?.data as ApiErrorBody | undefined
+  return body?.code ?? null
+}
