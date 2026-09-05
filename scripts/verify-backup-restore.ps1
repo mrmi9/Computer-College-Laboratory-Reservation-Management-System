@@ -37,6 +37,21 @@ select json_build_object(
 }
 try {
     $insertSql = @"
+insert into reservation(
+  reservation_no, applicant_id, applicant_type, lab_id, title, purpose,
+  participant_count, booking_date, period_no, status, contact_phone,
+  project_or_course, remark, cancellation_reason
+)
+values (
+  '$marker',
+  (select id from sys_user where status='ACTIVE' and user_type in ('STUDENT','TEACHER') order by id limit 1),
+  (select case user_type when 'STUDENT' then 'STUDENT' else 'TEACHER' end from sys_user where status='ACTIVE' and user_type in ('STUDENT','TEACHER') order by id limit 1),
+  (select id from lab where status='ACTIVE' order by id limit 1),
+  '备份恢复验证预约', '验证预约数据可完整恢复',
+  1, current_date, 1, 'CANCELLED', '13800000001',
+  '备份恢复验证', '仅存在于隔离验证环境', '验证夹具'
+);
+
 insert into audit_log(actor_username, action, target_type, target_id, request_id, result, detail)
 values ('backup-verifier', 'BACKUP_VERIFICATION', 'SYSTEM', '$marker', '$marker', 'SUCCESS', '{"marker":"$marker"}'::jsonb);
 "@
@@ -57,6 +72,7 @@ values ('backup-verifier', 'BACKUP_VERIFICATION', 'SYSTEM', '$marker', '$marker'
         verifiedAtUtc = [DateTime]::UtcNow.ToString('o')
         sourceDatabase = $SourceDatabase
         restoredDatabase = $targetDatabase
+        verificationMarker = $marker
         fingerprint = ($before | ConvertFrom-Json)
         rpoSeconds = 0
         restoreSeconds = [Math]::Round($restoreSeconds, 3)
@@ -69,6 +85,8 @@ values ('backup-verifier', 'BACKUP_VERIFICATION', 'SYSTEM', '$marker', '$marker'
 }
 finally {
     & docker @composeArguments exec -T postgres dropdb --force --if-exists --username $DatabaseUser $targetDatabase 2>$null
+    $cleanupSql = "delete from audit_log where request_id='$marker'; delete from reservation where reservation_no='$marker';"
+    & docker @composeArguments exec -T postgres psql --username $DatabaseUser --dbname $SourceDatabase --set ON_ERROR_STOP=1 --command $cleanupSql 2>$null | Out-Null
     if ([IO.File]::Exists($backupPath)) {
         Remove-Item -LiteralPath $backupPath -Force
     }

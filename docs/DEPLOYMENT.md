@@ -81,7 +81,7 @@ $env:BACKUP_ENCRYPTION_KEY = '与备份匹配的密钥'
 .\scripts\restore.ps1 -InputPath D:\secure-backups\lab-booking-20260905.dump.enc -TargetDatabase lab_booking_restore
 ```
 
-隔离演练会写入唯一审计标记、备份、恢复到新数据库，并比较预约/审计行数与有序 MD5 指纹：
+隔离演练会写入一条唯一的已取消预约和一条审计标记、备份、恢复到新数据库，并比较非空的预约/审计行数与有序 MD5 指纹；演练结束后清理源库标记：
 
 ```powershell
 .\scripts\verify-backup-restore.ps1
