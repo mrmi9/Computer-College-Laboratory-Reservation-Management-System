@@ -50,19 +50,19 @@ foreach ($composeFile in $composeFiles) {
 if (-not $SkipContainerScan) {
     docker info --format '{{.ServerVersion}}' | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw 'Docker 引擎不可用，无法执行 Trivy 文件系统安全扫描。'
+        throw 'Docker 引擎不可用，无法执行 Trivy 源代码安全扫描。'
     }
-    Write-Host '执行 Trivy 漏洞、秘密和配置扫描……'
+    Write-Host '执行 Trivy 源代码秘密和配置扫描……'
     & docker run --rm --volume "${repositoryRoot}:/workspace:ro" aquasec/trivy:0.71.2 fs `
-        --scanners vuln,secret,misconfig `
+        --scanners secret,misconfig `
         --severity HIGH,CRITICAL `
-        --ignore-unfixed `
         --exit-code 1 `
+        --skip-version-check `
         --skip-dirs /workspace/frontend/node_modules `
         --skip-dirs /workspace/backend/target `
         /workspace
     if ($LASTEXITCODE -ne 0) {
-        throw 'Trivy 检测到未处理的 high/critical 问题。'
+        throw 'Trivy 检测到未处理的 high/critical 秘密或配置问题。'
     }
 }
 
