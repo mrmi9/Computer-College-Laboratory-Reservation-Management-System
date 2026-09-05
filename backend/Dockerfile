@@ -9,7 +9,8 @@ RUN ./mvnw --batch-mode -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine-3.24
 
-RUN apk add --no-cache curl \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache curl \
     && addgroup -g 10001 app \
     && adduser -D -G app -u 10001 app
 WORKDIR /app
