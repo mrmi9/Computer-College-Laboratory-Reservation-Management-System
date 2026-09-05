@@ -7,6 +7,10 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/lab_booking}
     username: ${DB_USERNAME:lab_booking}
     password: ${DB_PASSWORD:dev-only-password}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 5000
   jpa:
     open-in-view: false
     hibernate:
@@ -20,6 +24,11 @@ spring:
 server:
   shutdown: graceful
   forward-headers-strategy: framework
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:200}
+      min-spare: ${TOMCAT_MIN_SPARE_THREADS:10}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:200}
 management:
   endpoints:
     web:
