@@ -1,0 +1,7 @@
+services:
+  frontend:
+    ports:
+      - "${PUBLIC_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ./deploy/nginx/nginx-prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${TLS_CERT_DIRECTORY:-./deploy/certs}:/run/secrets/tls:ro

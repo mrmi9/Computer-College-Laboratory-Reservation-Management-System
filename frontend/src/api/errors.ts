@@ -1,0 +1,16 @@
+import { AxiosError } from 'axios'
+import type { ApiErrorBody } from '@/types/api'
+
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError) {
+    const body = error.response?.data as ApiErrorBody | undefined
+    if (body?.message !== undefined && body.message.length > 0) return body.message
+  }
+  return fallback
+}
+
+export function apiErrorCode(error: unknown): string | null {
+  if (!(error instanceof AxiosError)) return null
+  const body = error.response?.data as ApiErrorBody | undefined
+  return body?.code ?? null
+}
