@@ -124,7 +124,9 @@ try {
 
     if (-not $SkipImageScan) {
         foreach ($image in @("${ProjectName}-backend", "${ProjectName}-frontend")) {
-            & docker run --rm aquasec/trivy:0.71.2 image `
+            & docker run --rm `
+                --volume '/var/run/docker.sock:/var/run/docker.sock' `
+                aquasec/trivy:0.71.2 image `
                 --severity HIGH,CRITICAL `
                 --ignore-unfixed `
                 --exit-code 1 `
