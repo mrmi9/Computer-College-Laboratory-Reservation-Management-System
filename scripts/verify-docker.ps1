@@ -124,7 +124,14 @@ try {
 
     if (-not $SkipImageScan) {
         foreach ($image in @("${ProjectName}-backend", "${ProjectName}-frontend")) {
-            & docker run --rm aquasec/trivy:0.71.2 image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 $image
+            & docker run --rm aquasec/trivy:0.71.2 image `
+                --severity HIGH,CRITICAL `
+                --ignore-unfixed `
+                --exit-code 1 `
+                --offline-scan `
+                --skip-version-check `
+                --disable-telemetry `
+                $image
             if ($LASTEXITCODE -ne 0) { throw "运行时镜像存在未处理的 high/critical 漏洞：$image" }
         }
     }

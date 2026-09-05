@@ -57,7 +57,9 @@ if (-not $SkipContainerScan) {
         --scanners secret,misconfig `
         --severity HIGH,CRITICAL `
         --exit-code 1 `
+        --offline-scan `
         --skip-version-check `
+        --disable-telemetry `
         --skip-dirs /workspace/frontend/node_modules `
         --skip-dirs /workspace/backend/target `
         /workspace
