@@ -18,6 +18,33 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
     & chmod 0666 $summaryPath
     if ($LASTEXITCODE -ne 0) { throw '无法为 k6 性能汇总文件设置写权限。' }
 }
+$memoryBytes = $null
+if (Test-Path -LiteralPath '/proc/meminfo') {
+    $memoryLine = Get-Content -LiteralPath '/proc/meminfo' | Where-Object { $_ -match '^MemTotal:' } | Select-Object -First 1
+    if ($memoryLine -match '^MemTotal:\s+(\d+)\s+kB') {
+        $memoryBytes = [int64]$Matches[1] * 1KB
+    }
+}
+$environmentEvidence = [ordered]@{
+    recordedAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+    os = [Runtime.InteropServices.RuntimeInformation]::OSDescription
+    architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+    processorCount = [Environment]::ProcessorCount
+    memoryBytes = $memoryBytes
+    dataset = [ordered]@{ users = 10000; labs = 200 }
+    workload = [ordered]@{
+        maximumVirtualUsers = 300
+        rampUpSeconds = 20
+        steadyStateSeconds = 30
+        rampDownSeconds = 10
+        thinkTimeSecondsBetweenRequests = 3
+    }
+    thresholdsMilliseconds = [ordered]@{ queryP95 = 500; reservationP95 = 1000 }
+}
+[IO.File]::WriteAllText(
+    (Join-Path $artifactDirectory 'environment.json'),
+    ($environmentEvidence | ConvertTo-Json -Depth 5)
+)
 
 docker info --format '{{.ServerVersion}}' | Out-Null
 if ($LASTEXITCODE -ne 0) {
@@ -40,10 +67,10 @@ $env:CORS_ALLOWED_ORIGINS = 'http://127.0.0.1:8088'
 $env:SPRING_PROFILES_ACTIVE = 'dev'
 $env:RATE_LIMIT_MAX_PER_MINUTE = '20000'
 $env:LOGIN_RATE_LIMIT_MAX_PER_MINUTE = '20000'
-$env:DB_POOL_MAX_SIZE = '64'
-$env:DB_POOL_MIN_IDLE = '32'
-$env:TOMCAT_MAX_THREADS = '300'
-$env:TOMCAT_MIN_SPARE_THREADS = '32'
+$env:DB_POOL_MAX_SIZE = '20'
+$env:DB_POOL_MIN_IDLE = '10'
+$env:TOMCAT_MAX_THREADS = '200'
+$env:TOMCAT_MIN_SPARE_THREADS = '20'
 $env:TOMCAT_ACCEPT_COUNT = '300'
 
 $composeBase = @('compose', '-p', $ProjectName) + $composeFiles

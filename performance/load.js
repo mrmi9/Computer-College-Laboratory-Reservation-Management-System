@@ -1,7 +1,8 @@
 import crypto from 'k6/crypto'
 import encoding from 'k6/encoding'
 import http from 'k6/http'
-import { check } from 'k6'
+import exec from 'k6/execution'
+import { check, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
 
 const baseUrl = __ENV.BASE_URL || 'http://frontend:8080/api'
@@ -14,10 +15,14 @@ const businessErrors = new Rate('business_errors')
 export const options = {
   scenarios: {
     authenticatedReservations: {
-      executor: 'per-vu-iterations',
-      vus: 300,
-      iterations: 1,
-      maxDuration: '5m',
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '20s', target: 300 },
+        { duration: '30s', target: 300 },
+        { duration: '10s', target: 0 },
+      ],
+      gracefulRampDown: '15s',
     },
   },
   thresholds: {
@@ -60,18 +65,19 @@ function isoDateDaysAhead(days) {
 }
 
 export default function () {
-  const sequence = __VU
-  const userId = 20000 + sequence
-  const username = `perf${String(sequence).padStart(5, '0')}`
+  const sequence = exec.scenario.iterationInTest
+  const userSequence = (sequence % 10000) + 1
+  const userId = 20000 + userSequence
+  const username = `perf${String(userSequence).padStart(5, '0')}`
   const token = issueToken(userId, username, ['STUDENT'], [
     'lab:read',
     'equipment:read',
     'reservation:create',
     'reservation:read:self',
   ])
-  const bookingDate = isoDateDaysAhead(3)
-  const labId = 10001 + Math.floor((sequence - 1) / 4)
-  const periodNo = ((sequence - 1) % 4) + 1
+  const bookingDate = isoDateDaysAhead(3 + Math.floor(sequence / 800))
+  const labId = 10001 + (sequence % 200)
+  const periodNo = (Math.floor(sequence / 200) % 4) + 1
   const headers = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -91,6 +97,7 @@ export default function () {
     },
   })
   businessErrors.add(!availabilityOk)
+  sleep(3)
 
   const reservation = http.post(
     `${baseUrl}/v1/reservations`,
@@ -102,7 +109,7 @@ export default function () {
       bookingDate,
       periodNo,
       projectOrCourse: '性能测试',
-      contactPhone: `139${String(sequence).padStart(8, '0')}`,
+      contactPhone: `139${String(userSequence).padStart(8, '0')}`,
       equipmentItems: [],
       remark: 'k6 generated',
     }),
@@ -114,6 +121,7 @@ export default function () {
     'reservation is auto approved': (response) => response.json('data.status') === 'APPROVED',
   })
   businessErrors.add(!reservationOk)
+  sleep(3)
 
   const adminToken = issueToken(1004, 'sysadmin01', ['SYSTEM_ADMIN'], ['statistics:read'])
   const statistics = http.get(
@@ -125,4 +133,5 @@ export default function () {
     'statistics returns 200': (response) => response.status === 200,
   })
   businessErrors.add(!statisticsOk)
+  sleep(3)
 }
